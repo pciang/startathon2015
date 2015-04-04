@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" />
+    <title>Real-Time Baby Tracking</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Accelerometer data</h1>
+        <div id="accelerometer_chart">
+
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script type="text/javascript"
+          src="https://www.google.com/jsapi?autoload={
+            'modules':[{
+              'name':'visualization',
+              'version':'1',
+              'packages':['corechart']
+            }]
+          }"></script>
+
+    <!--<script type="text/javascript">
+      google.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+          ['Time', 'X', 'Y', 'Z'],
+          ['2004',  0,   -1,   4.00],
+          ['2005',  1.70,   2.3,   4.60],
+          ['2006',  6.60,   -2.3,    11.20],
+          ['2007',  1.030,  4.2,    5.40]
+        ]);
+
+        var options = {
+          title: 'Accelerometer',
+          curveType: 'function',
+          legend: { position: 'bottom' }
+        };
+
+        var chart = new google.visualization.LineChart(document.getElementById('accelerometer_chart'));
+
+        chart.draw(data, options);
+      }
+    </script>-->
+    <div id="script-field"></div>
+    <script type="text/javascript">
+var startDate = new Date(0);
+var endDate = new Date();
+$(document).ready(function () {
+    var scriptField = document.getElementById("script-field");
+
+    function call() {
+        (scriptField.appendChild(document.createElement("script"))).src = "http://api.thingspeak.com/channels/32609/feed.json?key=ZF2EGFBFBOEQYBPB&callback=ganteng&start=" + startDate.toISOString();
+        setTimeout(call, 15000);
+    }
+    google.setOnLoadCallback(call);
+});
+var charts = [];
+var lastEntryId = 0;
+function ganteng(json){
+    console.log(json);
+    drawChart();
+
+    function drawChart() {
+        var channel = json.channel;
+
+        if (charts.length == 0)
+            charts.push([channel.name, channel.field1, channel.field2, channel.field3, channel.field4
+                , channel.field5, channel.field6, channel.field7, channel.field8]);
+
+        for(var i = 0, size = json.feeds.length; i < size; ++i){
+            var feed = json.feeds[i];
+
+            // prevent same entry
+            if (feed.entry_id > lastEntryId) lastEntryId = feed.entry_id;
+            else continue;
+            
+            charts.push([feed.entry_id, parseFloat(feed.field1), parseFloat(feed.field2), parseFloat(feed.field3), parseFloat(feed.field4)
+                    , parseFloat(feed.field5), parseFloat(feed.field6), parseFloat(feed.field7), parseFloat(feed.field8)]);
+        }
+        startDate = new Date(channel.updated_at);
+        console.log(startDate);
+
+        var options = {
+          title: 'Thingspeak',
+          curveType: 'function',
+          legend: { position: 'bottom' }
+        };
+        console.table(charts);
+
+        new google.visualization.LineChart(document.getElementById('accelerometer_chart')).draw(
+            google.visualization.arrayToDataTable(charts), options);
+    }
+}
+    </script>
+</body>
+</html>
