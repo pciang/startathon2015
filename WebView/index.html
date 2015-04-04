@@ -24,30 +24,6 @@
               'packages':['corechart']
             }]
           }"></script>
-
-    <!--<script type="text/javascript">
-      google.setOnLoadCallback(drawChart);
-
-      function drawChart() {
-        var data = google.visualization.arrayToDataTable([
-          ['Time', 'X', 'Y', 'Z'],
-          ['2004',  0,   -1,   4.00],
-          ['2005',  1.70,   2.3,   4.60],
-          ['2006',  6.60,   -2.3,    11.20],
-          ['2007',  1.030,  4.2,    5.40]
-        ]);
-
-        var options = {
-          title: 'Accelerometer',
-          curveType: 'function',
-          legend: { position: 'bottom' }
-        };
-
-        var chart = new google.visualization.LineChart(document.getElementById('accelerometer_chart'));
-
-        chart.draw(data, options);
-      }
-    </script>-->
     <div id="script-field"></div>
     <script type="text/javascript">
 var startDate = new Date(0);
@@ -56,46 +32,64 @@ $(document).ready(function () {
     var scriptField = document.getElementById("script-field");
 
     function call() {
-        (scriptField.appendChild(document.createElement("script"))).src = "http://api.thingspeak.com/channels/32609/feed.json?key=ZF2EGFBFBOEQYBPB&callback=ganteng&start=" + startDate.toISOString();
-        setTimeout(call, 15000);
+        (scriptField.appendChild(document.createElement("script"))).src = "http://localhost/startathon2015/retrieve.php?callback=ganteng&start_date=" + startDate.toMySQLString();
+        setTimeout(call, 1000);
     }
     google.setOnLoadCallback(call);
 });
 var charts = [];
 var lastEntryId = 0;
+function pad(number) {
+  if (number < 10) {
+    return '0' + number;
+  }
+  return number;
+}
+
+Date.prototype.toMySQLString = function() {
+  return this.getUTCFullYear() +
+    '-' + pad(this.getUTCMonth() + 1) +
+    '-' + pad(this.getUTCDate()) +
+    ' ' + pad(this.getUTCHours()) +
+    ':' + pad(this.getUTCMinutes()) +
+    ':' + pad(this.getUTCSeconds());
+};
 function ganteng(json){
     console.log(json);
     drawChart();
 
     function drawChart() {
-        var channel = json.channel;
+        if (lastEntryId === 0) charts.push(["Date & time", "AcX", "AcY", "AcZ", "GyX", "GyY", "GyZ", "Tmp", "Hum"]);
 
-        if (charts.length == 0)
-            charts.push([channel.name, channel.field1, channel.field2, channel.field3, channel.field4
-                , channel.field5, channel.field6, channel.field7, channel.field8]);
+        for(var i = 0, size = json.length; i < size; ++i){
+            var entry = json[i];
+            if (lastEntryId > parseInt(entry.id, 10)) {
+                break;
+            }
+            lastEntryId = parseInt(entry.id, 10);
+            var t = entry.datetime.split(/[- :]/);
+            //console.log(t);
+            // +8, got bug, kthxbye
+            startDate = new Date(t[0], t[1]-1, t[2], t[3]+8, t[4], t[5]);
+            //console.log(startDate);
+            //return;
 
-        for(var i = 0, size = json.feeds.length; i < size; ++i){
-            var feed = json.feeds[i];
+            charts.push([entry.datetime, parseFloat(entry.acx), parseFloat(entry.acy)
+                    , parseFloat(entry.acz), parseFloat(entry.gyx), parseFloat(entry.gyy)
+                    , parseFloat(entry.gyz), parseFloat(entry.tmp), parseFloat(entry.hum)]);
 
-            // prevent same entry
-            if (feed.entry_id > lastEntryId) lastEntryId = feed.entry_id;
-            else continue;
-            
-            charts.push([feed.entry_id, parseFloat(feed.field1), parseFloat(feed.field2), parseFloat(feed.field3), parseFloat(feed.field4)
-                    , parseFloat(feed.field5), parseFloat(feed.field6), parseFloat(feed.field7), parseFloat(feed.field8)]);
         }
-        startDate = new Date(channel.updated_at);
-        console.log(startDate);
 
         var options = {
-          title: 'Thingspeak',
+          title: 'Real-Time Baby Monitoring',
           curveType: 'function',
-          legend: { position: 'bottom' }
+          legend: { position: 'bottom' },
+          height: 500
         };
-        console.table(charts);
+        // console.table(charts);
 
         new google.visualization.LineChart(document.getElementById('accelerometer_chart')).draw(
-            google.visualization.arrayToDataTable(charts), options);
+                google.visualization.arrayToDataTable(charts), options);
     }
 }
     </script>
