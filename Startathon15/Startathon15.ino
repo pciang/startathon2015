@@ -1,21 +1,25 @@
 #include <Wire.h>
+#include <dht.h>
 
-#define SSID "ST2015RTP3" // SSID for Prototyping Lab @ NDC
-#define PASS "H@ck8266"        // WPA2 Password for Prototyping Lab @ NDC
-#define IP   "184.106.153.149"  // IP address pointed to by thingspeak.com
+#define SSID "La Liberta de Espana" // SSID for Prototyping Lab @ NDC
+#define PASS "robertganteng"   // WPA2 Password for Prototyping Lab @ NDC
+#define IP   "192.168.173.1"  // IP address pointed to by thingspeak.com
 #define LED         13
-#define HB_SENSOR_PIN 0
+//#define HB_SENSOR_PIN 0
+#define HB_SENSOR_PIN A0
 
 //String GET = "GET /update?key=56KD6EOB87O445X7&field1=";
-String GET = "GET /update?key=Z20R8DE7LKJ4KER4";
+String GET = "GET /startathon2015/record.php?";
 
 const int MPU=0x68;  // I2C address of the MPU-6050
-int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
+int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ; double hm_value;
 
 int temp = 0;
+dht DHT;
 void setup (void)
 {
   temp = 0;
+  
   // Initialise pin connected to on-board LED as an output, and initialise it to be logic LOW (off)
   pinMode      (LED, OUTPUT) ;
   digitalWrite (LED, LOW)    ;
@@ -48,16 +52,18 @@ void setup (void)
   //Serial.begin(9600);
 }
 
-double hbAlpha = 0.75;
-int hbPeriod = 100;
-double hbChange = 0.0;
-double hbMinval = 0.0;
+//double hbAlpha = 0.75;
+//int hbPeriod = 100;
+//double hbChange = 0.0;
+//double hbMinval = 0.0;
 void loop (void)
 {
-  static double hbOldValue = 0;
-  static double hbOldChange = 0;
-  int hbRawValue = analogRead (HB_SENSOR_PIN);
-  double hbValue = hbAlpha * hbOldValue + (1 - hbAlpha) * hbRawValue;
+  //static double hbOldValue = 0;
+  //static double hbOldChange = 0;
+   DHT.read11(HB_SENSOR_PIN);
+
+  hm_value = DHT.humidity;
+  //double hbValue = hbAlpha * hbOldValue + (1 - hbAlpha) * hbRawValue;
   
   Wire.beginTransmission(MPU);
   Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
@@ -79,18 +85,18 @@ void loop (void)
   Serial.print(" | GyX = "); Serial.print(GyX);
   Serial.print(" | GyY = "); Serial.print(GyY);
   Serial.print(" | GyZ = "); Serial.println(GyZ);
-  Serial.print(" | hbValue = "); Serial.println(hbValue);
+Serial.print(" | hmValue = "); Serial.println(hm_value);
   
   
   
-  delay(1000);
-  hbOldValue = hbValue;
+  // delay(2000);
+  ///hbOldValue = hbValue;
 
-  if (temp == 3) 
-    updateData(AcX, AcY, AcZ, Tmp/340.00 + 36.53, GyX, GyY, GyZ, hbValue);
-  else if (temp == 20)
-    temp = 0;
-  temp++;
+  //if (temp == 3) 
+    updateData(AcX, AcY, AcZ, Tmp/340.00 + 36.53, GyX, GyY, GyZ, hm_value);
+  //else if (temp == 20)
+  //  temp = 0;
+  //temp++;
 }
 
 void blinkLED (unsigned char times, unsigned char duration)
@@ -160,27 +166,27 @@ boolean updateData (int16_t AcX,int16_t AcY,int16_t AcZ, int16_t Tmp, int16_t Gy
   }
   
   cmd  = GET                 ;
-  cmd += "&field1="         ;
+  cmd += "&acx="         ;
   cmd += AcX         ;
-  cmd += "&field2="         ;
+  cmd += "&acy="         ;
   cmd += AcY         ;
-  cmd += "&field3="         ;
+  cmd += "&acz="         ;
   cmd += AcZ         ;
-  cmd += "&field4="         ;
+  cmd += "&tmp="         ;
   cmd += Tmp         ;
-  cmd += "&field5="         ;
+  cmd += "&gyx="         ;
   cmd += GyX       ;
-  cmd += "&field6="         ;
+  cmd += "&gyy="         ;
   cmd += GyY         ;
-  cmd += "&field7="         ;
+  cmd += "&gyz="         ;
   cmd += GyZ         ;
-  cmd += "&field8=";
+  cmd += "&hum=";
   cmd += hbValue;
   cmd += " HTTP/1.0\r\n\r\n" ;
   
   Serial.print   ("AT+CIPSEND=") ;
   Serial.println (cmd.length())  ; // AT+CIPSEND=<LENGTH_OF_HTTP_GET_REQUEST>\r\n
-  
+  // Serial.print(cmd);
   delay (500) ;
   
   if (Serial.find(">"))
