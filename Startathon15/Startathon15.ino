@@ -1,15 +1,6 @@
-//#define DS18B20_PIN 4
-//#define LED         13
+#define LED         13
 
 
-//#define ButtonGreen         2
-//#define ButtonYellow        3
-//#define ButtonBlack         4
-//#define ServoMotor          6
-
-//#include <OneWire.h>
-//#include <DallasTemperature.h>
-//#include <Servo.h>
 #include<Wire.h>
 
 
@@ -78,6 +69,7 @@ void loop (void)
   Serial.print(" | GyZ = "); Serial.println(GyZ);
   delay(333);
   
+  updateData(AcX, AcY, AcZ, Tmp/340.00 + 36.53, GyX, GyY, GyZ);
 }
 
 void blinkLED (unsigned char times, unsigned char duration)
@@ -118,11 +110,11 @@ boolean connectWiFi ()
   if (Serial.find("OK"))
   {
     blinkLED (2, 200) ; // Blink LED twice if connection to Wi-Fi network is successful
-    Serial.write("connected");
+   // Serial.write("connected");
     return true ;
   }
   else{ 
-  Serial.write("not connected");
+ // Serial.write("not connected");
   return false ;}
 }
 
