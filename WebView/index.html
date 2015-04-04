@@ -7,11 +7,11 @@
     <title>Real-Time Baby Tracking</title>
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <h1>Accelerometer data</h1>
-        <div id="accelerometer_chart">
-
-        </div>
+        <div id="accelerometer_chart"></div>
+        <div id="gyroscope_chart"></div>
+        <div id="tmphum_chart"></div>
     </div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
@@ -37,7 +37,11 @@ $(document).ready(function () {
     }
     google.setOnLoadCallback(call);
 });
-var charts = [];
+
+var accl_charts = [];
+var gyro_charts = [];
+var tmphum_charts = [];
+
 var lastEntryId = 0;
 function pad(number) {
   if (number < 10) {
@@ -47,49 +51,57 @@ function pad(number) {
 }
 
 Date.prototype.toMySQLString = function() {
-  return this.getUTCFullYear() +
-    '-' + pad(this.getUTCMonth() + 1) +
-    '-' + pad(this.getUTCDate()) +
-    ' ' + pad(this.getUTCHours()) +
-    ':' + pad(this.getUTCMinutes()) +
-    ':' + pad(this.getUTCSeconds());
+  return this.getFullYear() +
+    '-' + pad(this.getMonth() + 1) +
+    '-' + pad(this.getDate()) +
+    ' ' + pad(this.getHours()) +
+    ':' + pad(this.getMinutes()) +
+    ':' + pad(this.getSeconds());
 };
 function ganteng(json){
-    console.log(json);
+    //console.log(json);
     drawChart();
 
     function drawChart() {
-        if (lastEntryId === 0) charts.push(["Date & time", "AcX", "AcY", "AcZ", "GyX", "GyY", "GyZ", "Tmp", "Hum"]);
+        if (lastEntryId === 0){
+            accl_charts.push(["Date & time", "AcX", "AcY", "AcZ"]);
+            gyro_charts.push(["Date & time", "GyX", "GyY", "GyZ"]);
+            tmphum_charts.push(["Date & time", "Tmp", "Hum"]);
+        }
 
         for(var i = 0, size = json.length; i < size; ++i){
             var entry = json[i];
-            if (lastEntryId > parseInt(entry.id, 10)) {
-                break;
+            if (lastEntryId >= parseInt(entry.id, 10)) {
+                continue;
             }
             lastEntryId = parseInt(entry.id, 10);
             var t = entry.datetime.split(/[- :]/);
             //console.log(t);
             // +8, got bug, kthxbye
-            startDate = new Date(t[0], t[1]-1, t[2], t[3]+8, t[4], t[5]);
+            startDate = new Date(t[0], t[1]-1, t[2], t[3], t[4], t[5]);
             //console.log(startDate);
             //return;
 
-            charts.push([entry.datetime, parseFloat(entry.acx), parseFloat(entry.acy)
-                    , parseFloat(entry.acz), parseFloat(entry.gyx), parseFloat(entry.gyy)
-                    , parseFloat(entry.gyz), parseFloat(entry.tmp), parseFloat(entry.hum)]);
-
+            accl_charts.push([entry.datetime, parseFloat(entry.acx), parseFloat(entry.acy), parseFloat(entry.acz)]);
+            gyro_charts.push([entry.datetime, parseFloat(entry.gyx), parseFloat(entry.gyy), parseFloat(entry.gyz)]);
+            tmphum_charts.push([entry.datetime, parseFloat(entry.tmp), parseFloat(entry.hum)]);
         }
 
         var options = {
-          title: 'Real-Time Baby Monitoring',
+          title: 'Real-Time Baby Tracking',
           curveType: 'function',
           legend: { position: 'bottom' },
-          height: 500
+          height: 650,
+          width: 1500
         };
-        // console.table(charts);
+        // console.table(accl_charts);
 
         new google.visualization.LineChart(document.getElementById('accelerometer_chart')).draw(
-                google.visualization.arrayToDataTable(charts), options);
+                google.visualization.arrayToDataTable(accl_charts), options);
+        new google.visualization.LineChart(document.getElementById('gyroscope_chart')).draw(
+                google.visualization.arrayToDataTable(gyro_charts), options);
+        new google.visualization.LineChart(document.getElementById('tmphum_chart')).draw(
+                google.visualization.arrayToDataTable(tmphum_charts), options);
     }
 }
     </script>
