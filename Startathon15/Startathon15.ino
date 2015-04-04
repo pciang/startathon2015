@@ -1,21 +1,20 @@
-#define LED         13
-
-
-#include<Wire.h>
-
+#include <Wire.h>
 
 #define SSID "ST2015RTP3" // SSID for Prototyping Lab @ NDC
 #define PASS "H@ck8266"        // WPA2 Password for Prototyping Lab @ NDC
 #define IP   "184.106.153.149"  // IP address pointed to by thingspeak.com
+#define LED         13
 
 //String GET = "GET /update?key=56KD6EOB87O445X7&field1=";
-String GET = "GET /update?key=56KD6EOB87O445X7";
+String GET = "GET /update?key=Z20R8DE7LKJ4KER4";
 
 const int MPU=0x68;  // I2C address of the MPU-6050
 int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
 
+int temp = 0;
 void setup (void)
 {
+  temp = 0;
   // Initialise pin connected to on-board LED as an output, and initialise it to be logic LOW (off)
   pinMode      (LED, OUTPUT) ;
   digitalWrite (LED, LOW)    ;
@@ -24,17 +23,25 @@ void setup (void)
   Serial.begin (115200) ;
   
   Serial.println ("AT") ;
+  // Serial.println("AT+CIPMUX=1");
+  // Serial.print("AT+CIPSTART=32609,\"TCP\",");
+  // Serial.print(IP);
+  // Serial.println(",80");
   
-  delay (500) ;
+  delay (1000) ;
   
   if (Serial.find("OK"))
   {
     blinkLED (2, 100) ; // Communication OK - blink LED twice in rapid succession
-    
-    if (connectWiFi() != true) panic () ; // Attempt to connect to the Wi-Fi network
+    //Serial.print("Sampe sini");
+    if (connectWiFi() != true){
+      //Serial.print("panik");
+      panic () ; // Attempt to connect to the Wi-Fi network
+    }
   }
   else
   {
+    Serial.print("Panik lgi");
     panic () ; // Give up and report the error
   }
   
@@ -44,7 +51,7 @@ void setup (void)
   Wire.write(0x6B);  // PWR_MGMT_1 register
   Wire.write(0);     // set to zero (wakes up the MPU-6050)
   Wire.endTransmission(true);
-  Serial.begin(9600);
+  //Serial.begin(9600);
 }
 
 void loop (void)
@@ -67,9 +74,12 @@ void loop (void)
   Serial.print(" | GyX = "); Serial.print(GyX);
   Serial.print(" | GyY = "); Serial.print(GyY);
   Serial.print(" | GyZ = "); Serial.println(GyZ);
-  delay(333);
-  
-  updateData(AcX, AcY, AcZ, Tmp/340.00 + 36.53, GyX, GyY, GyZ);
+  delay(1000);
+  if (temp == 3) 
+    updateData(AcX, AcY, AcZ, Tmp/340.00 + 36.53, GyX, GyY, GyZ);
+  else if (temp == 16)
+    temp = 0;
+  temp++;
 }
 
 void blinkLED (unsigned char times, unsigned char duration)
@@ -153,7 +163,7 @@ boolean updateData (int16_t AcX,int16_t AcY,int16_t AcZ, int16_t Tmp, int16_t Gy
   cmd += GyY         ;
    cmd += "&field7="         ;
   cmd += GyZ         ;
-  cmd += " HTTP/1.1\r\n\r\n" ;
+  cmd += " HTTP/1.0\r\n\r\n" ;
   
   Serial.print   ("AT+CIPSEND=") ;
   Serial.println (cmd.length())  ; // AT+CIPSEND=<LENGTH_OF_HTTP_GET_REQUEST>\r\n
