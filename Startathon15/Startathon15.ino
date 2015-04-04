@@ -4,6 +4,7 @@
 #define PASS "H@ck8266"        // WPA2 Password for Prototyping Lab @ NDC
 #define IP   "184.106.153.149"  // IP address pointed to by thingspeak.com
 #define LED         13
+#define HB_SENSOR_PIN 0
 
 //String GET = "GET /update?key=56KD6EOB87O445X7&field1=";
 String GET = "GET /update?key=Z20R8DE7LKJ4KER4";
@@ -23,25 +24,18 @@ void setup (void)
   Serial.begin (115200) ;
   
   Serial.println ("AT") ;
-  // Serial.println("AT+CIPMUX=1");
-  // Serial.print("AT+CIPSTART=32609,\"TCP\",");
-  // Serial.print(IP);
-  // Serial.println(",80");
   
   delay (1000) ;
   
   if (Serial.find("OK"))
   {
     blinkLED (2, 100) ; // Communication OK - blink LED twice in rapid succession
-    //Serial.print("Sampe sini");
     if (connectWiFi() != true){
-      //Serial.print("panik");
       panic () ; // Attempt to connect to the Wi-Fi network
     }
   }
   else
   {
-    Serial.print("Panik lgi");
     panic () ; // Give up and report the error
   }
   
@@ -54,12 +48,22 @@ void setup (void)
   //Serial.begin(9600);
 }
 
+double hbAlpha = 0.75;
+int hbPeriod = 100;
+double hbChange = 0.0;
+double hbMinval = 0.0;
 void loop (void)
 {
+  static double hbOldValue = 0;
+  static double hbOldChange = 0;
+  int hbRawValue = analogRead (HB_SENSOR_PIN);
+  double hbValue = hbAlpha * hbOldValue + (1 - hbAlpha) * hbRawValue;
+  
   Wire.beginTransmission(MPU);
   Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
   Wire.endTransmission(false);
   Wire.requestFrom(MPU,14,true);  // request a total of 14 registers
+  
   AcX=Wire.read()<<8|Wire.read();  // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)     
   AcY=Wire.read()<<8|Wire.read();  // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
   AcZ=Wire.read()<<8|Wire.read();  // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
@@ -67,6 +71,7 @@ void loop (void)
   GyX=Wire.read()<<8|Wire.read();  // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
   GyY=Wire.read()<<8|Wire.read();  // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
   GyZ=Wire.read()<<8|Wire.read();  // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+  
   Serial.print("AcX = "); Serial.print(AcX);
   Serial.print(" | AcY = "); Serial.print(AcY);
   Serial.print(" | AcZ = "); Serial.print(AcZ);
@@ -74,10 +79,16 @@ void loop (void)
   Serial.print(" | GyX = "); Serial.print(GyX);
   Serial.print(" | GyY = "); Serial.print(GyY);
   Serial.print(" | GyZ = "); Serial.println(GyZ);
+  Serial.print(" | hbValue = "); Serial.println(hbValue);
+  
+  
+  
   delay(1000);
+  hbOldValue = hbValue;
+
   if (temp == 3) 
-    updateData(AcX, AcY, AcZ, Tmp/340.00 + 36.53, GyX, GyY, GyZ);
-  else if (temp == 16)
+    updateData(AcX, AcY, AcZ, Tmp/340.00 + 36.53, GyX, GyY, GyZ, hbValue);
+  else if (temp == 20)
     temp = 0;
   temp++;
 }
@@ -128,7 +139,7 @@ boolean connectWiFi ()
   return false ;}
 }
 
-boolean updateData (int16_t AcX,int16_t AcY,int16_t AcZ, int16_t Tmp, int16_t GyX,int16_t GyY, int16_t GyZ )
+boolean updateData (int16_t AcX,int16_t AcY,int16_t AcZ, int16_t Tmp, int16_t GyX,int16_t GyY, int16_t GyZ, double hbValue )
 {
   String cmd = "AT+CIPSTART=\"TCP\",\"";
   
@@ -161,8 +172,10 @@ boolean updateData (int16_t AcX,int16_t AcY,int16_t AcZ, int16_t Tmp, int16_t Gy
   cmd += GyX       ;
   cmd += "&field6="         ;
   cmd += GyY         ;
-   cmd += "&field7="         ;
+  cmd += "&field7="         ;
   cmd += GyZ         ;
+  cmd += "&field8=";
+  cmd += hbValue;
   cmd += " HTTP/1.0\r\n\r\n" ;
   
   Serial.print   ("AT+CIPSEND=") ;
