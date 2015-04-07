@@ -9,9 +9,9 @@
 <body>
     <div class="container-fluid">
         <h1>Accelerometer data</h1>
-        <div id="accelerometer_chart"></div>
-        <div id="gyroscope_chart"></div>
-        <div id="tmphum_chart"></div>
+        <div id="accelerometer_chart" style="min-height: 750px;"></div>
+        <div id="gyroscope_chart" style="min-height: 750px;"></div>
+        <div id="tmphum_chart" style="min-height: 750px;"></div>
     </div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
@@ -32,7 +32,12 @@ $(document).ready(function () {
     var scriptField = document.getElementById("script-field");
 
     function call() {
-        (scriptField.appendChild(document.createElement("script"))).src = "http://localhost/startathon2015/retrieve.php?callback=ganteng&start_date=" + startDate.toMySQLString();
+        while(scriptField.firstChild) {
+            scriptField.removeChild(scriptField.firstChild);
+        }
+
+        (scriptField.appendChild(document.createElement("script"))).src = "http://localhost/startathon2015/retrieve.php?callback=ganteng&start_date="
+                 + startDate.toMySQLString();
         setTimeout(call, 1000);
     }
     google.setOnLoadCallback(call);
@@ -41,6 +46,10 @@ $(document).ready(function () {
 var accl_charts = [];
 var gyro_charts = [];
 var tmphum_charts = [];
+
+var accl_real;
+var gyro_real;
+var tmphum_real;
 
 var lastEntryId = 0;
 function pad(number) {
@@ -67,6 +76,10 @@ function ganteng(json){
             accl_charts.push(["Date & time", "AcX", "AcY", "AcZ"]);
             gyro_charts.push(["Date & time", "GyX", "GyY", "GyZ"]);
             tmphum_charts.push(["Date & time", "Tmp", "Hum"]);
+        } else {
+            accl_real.clearChart();
+            gyro_real.clearChart();
+            tmphum_real.clearChart();
         }
 
         for(var i = 0, size = json.length; i < size; ++i){
@@ -96,12 +109,14 @@ function ganteng(json){
         };
         // console.table(accl_charts);
 
-        new google.visualization.LineChart(document.getElementById('accelerometer_chart')).draw(
-                google.visualization.arrayToDataTable(accl_charts), options);
-        new google.visualization.LineChart(document.getElementById('gyroscope_chart')).draw(
-                google.visualization.arrayToDataTable(gyro_charts), options);
-        new google.visualization.LineChart(document.getElementById('tmphum_chart')).draw(
-                google.visualization.arrayToDataTable(tmphum_charts), options);
+        (accl_real = new google.visualization.LineChart(document.getElementById('accelerometer_chart')))
+                .draw(google.visualization.arrayToDataTable(accl_charts), options);
+
+        (gyro_real = new google.visualization.LineChart(document.getElementById('gyroscope_chart')))
+                .draw(google.visualization.arrayToDataTable(gyro_charts), options);
+
+        (tmphum_real = new google.visualization.LineChart(document.getElementById('tmphum_chart')))
+                .draw(google.visualization.arrayToDataTable(tmphum_charts), options);
     }
 }
     </script>
